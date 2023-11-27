@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Welcome to the Chat</title>
+    <!-- 引入 Bootstrap CSS -->
+    <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
+</head>
+<body>
+    <div class="container mt-4">
+        <h2>Welcome to the Chat</h2>
+        <form method="post">
+            <button type="submit" name="create" class="btn btn-primary">Create New Chat Room</button>
+        </form>
+        <br>
+        <form method="post">
+            <div class="form-group">
+                <label for="room_code">Enter Chat Room Code:</label>
+                <input type="text" class="form-control" name="room_code" id="room_code">
+            </div>
+            <button type="submit" name="join" class="btn btn-primary">Join Chat Room</button>
+        </form>
+    </div>
+</body>
+</html>
+
+
+

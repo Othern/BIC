@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Welcome to the Chat</title>
+    <!-- 引入 Bootstrap CSS -->
+    <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
+    <script>
+        var room = '{{ room }}';
+        // 如果存在错误消息，则显示模态窗口
+        $(document).ready(function() {
+                $('#errorModal').modal('show');
+        });
+    </script>
+</head>
+    <!-- Bootstrap 模态窗口 -->
+<div class="modal fade" id="errorModal" tabindex="-1" role="dialog" aria-labelledby="errorModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="errorModalLabel">Error</h5>
+            </div>
+            <div class="modal-body">
+                Can not join  " {{ room }} "  room.
+            </div>
+            <div class="modal-footer">
+                <a href="{{ url_for('index') }}" class="btn btn-primary">Go Back</a>
+            </div>
+        </div>
+    </div>
+</div>
+</html>
