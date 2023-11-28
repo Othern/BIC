@@ -1,0 +1,113 @@
+<style>
+    #messages {
+        height: 400px;
+        overflow-y: auto;
+    }
+    .message {
+        padding: 5px 10px;
+        border-radius: 10px;
+        margin-top: 5px;
+        margin-bottom: 5px;
+    }
+    .other-user {
+        background-color: #90EE90;
+        border: 1px solid #ddd;
+        margin-bottom: 5px;
+    }
+    .current-user {
+        background-color: #FFFFFF;
+        text-align: right;
+        border: 1px solid #ddd;
+        margin-bottom: 5px;
+    }
+    .chat-input {
+        display: flex;
+        align-items: center;
+    }
+    .chat-input input {
+        flex-grow: 1;
+        margin-right: 10px;
+    }
+</style>
+<html>
+    <div class="container mt-4">
+        <h3>Chat Room: {{ room }}</h3>
+        <div class="card">
+            <div class="card-body">
+                <ul id="messages" class="list-group"></ul>
+            </div>
+            <div class="card-footer chat-input">
+                <input type="text" id="message" class="form-control" placeholder="Enter a message...">
+                <button onclick="sendMessage()" class="btn btn-primary">Send</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 用户名输入模态框 -->
+    <div class="modal" tabindex="-1" role="dialog" id="usernameModal">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Enter your username</h5>
+                </div>
+                <div class="modal-body">
+                    <input type="text" id="username" class="form-control" placeholder="Username">
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-primary" onclick="joinChat()">Join Chat</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"></script>
+    <script type="text/javascript" charset="utf-8">
+        var socket = io.connect('http://' + document.domain + ':' + location.port);
+        var userName;
+        var room = "{{ room }}";
+
+        $(document).ready(function() {
+            $('#usernameModal').modal({
+                backdrop: 'static',
+                keyboard: false
+            });
+        });
+
+        function joinChat() {
+            userName = document.getElementById('username').value;
+            if (userName) {
+                $('#usernameModal').modal('hide');
+                socket.emit('text_join', {username: userName, room: room});
+            } else {
+                alert('Please enter a username.');
+            }
+        }
+
+        socket.on('connect', function() {
+            // 用户名将在 joinChat 函数中通过模态框获得
+        });
+
+        socket.on('message', function(data) {
+            var messages = document.getElementById('messages');
+            var isCurrentUser = data.user === userName;
+            var msgClass = isCurrentUser ? 'current-user' : 'other-user';
+            var msgHtml = '<li class="list-group-item ' + msgClass + '">' + data.msg + '<br><small>' + data.user + '</small></li>';
+            messages.innerHTML += msgHtml;
+        });
+
+        function sendMessage(){
+            var message = document.getElementById('message').value;
+            socket.emit('message', {msg: message, user: userName, room: room});
+            document.getElementById('message').value = '';
+        }
+
+        window.onbeforeunload = function() {
+            socket.emit('leave', {username: userName, room: room});
+        };
+    </script>
+
+    <!-- 引入 Bootstrap JS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
+
+</html>
