@@ -33,15 +33,15 @@
     <div class="container mt-4">
         <h3>Chat Room: {{ room }}</h3>
         <div class="card">
-            <div class="card-body">
+            <div class="card-body" id="messageContainer">
                 <ul id="messages" class="list-group"></ul>
             </div>
             <div class="card-footer chat-input">
-                <input type="text" id="message" class="form-control" placeholder="Enter a message...">
+                <input type="text" id="message" class="form-control" placeholder="Enter a message..." onkeydown="handleEnter(event)">
                 <button onclick="sendMessage()" class="btn btn-primary">Send</button>
             </div>
         </div>
-    </div>
+    </div>    
 
     <!-- 用户名输入模态框 -->
     <div class="modal" tabindex="-1" role="dialog" id="usernameModal">
@@ -88,19 +88,36 @@
         });
 
         socket.on('message', function(data) {
-            var messages = document.getElementById('messages');
-            var isCurrentUser = data.user === userName;
-            var msgClass = isCurrentUser ? 'current-user' : 'other-user';
-            var msgHtml = '<li class="list-group-item ' + msgClass + '">' + data.msg + '<br><small>' + data.user + '</small></li>';
-            messages.innerHTML += msgHtml;
-        });
+    var messages = document.getElementById('messages');
+    var isCurrentUser = data.user === userName;
+    var msgClass = isCurrentUser ? 'current-user' : 'other-user';
+    var msgHtml = '<li class="list-group-item ' + msgClass + '">' + data.msg + '<br><small>' + data.user + '</small></li>';
 
-        function sendMessage(){
-            var message = document.getElementById('message').value;
-            socket.emit('message', {msg: message, user: userName, room: room});
-            document.getElementById('message').value = '';
-        }
+    // Add the new message to the bottom of the list
+    messages.innerHTML += msgHtml;
 
+    scrollToBottom(); // Scroll to the bottom after adding the new message
+});
+
+function sendMessage(){
+    var message = document.getElementById('message').value;
+    socket.emit('message', {msg: message, user: userName, room: room});
+    document.getElementById('message').value = '';
+}
+
+function scrollToBottom() {
+    var messageContainer = document.getElementById('messages');
+    messageContainer.scrollTop = messageContainer.scrollHeight;
+}
+
+function handleEnter(event) {
+    if (event.key === 'Enter') {
+        event.preventDefault(); // Prevent default behavior of Enter key
+        sendMessage(); // Call the sendMessage function when Enter is pressed
+    }
+}
+
+        
         window.onbeforeunload = function() {
             socket.emit('leave', {username: userName, room: room});
         };

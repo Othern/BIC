@@ -65,4 +65,4 @@ def on_leave(data):
     send({'msg': username + ' has left the room.', 'user': 'System'}, room=room)
 
 if __name__ == '__main__':
-    socketio.run(app, host='0.0.0.0', port=4000, debug=True)
+    socketio.run(app, host='0.0.0.0', port=4000, debug=True ,allow_unsafe_werkzeug=True)
