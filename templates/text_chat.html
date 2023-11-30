@@ -91,12 +91,18 @@
             } else {
                 alert('Please enter a username.');
             }
+            
         }
 
         socket.on('connect', function() {
             // 用户名将在 joinChat 函数中通过模态框获得
         });
-
+        document.getElementById("username").addEventListener("keyup", function(event) {
+            event.preventDefault();
+            if (event.keyCode === 13) {
+                joinChat();
+            }
+        });
         socket.on('message', function(data) {
     var messages = document.getElementById('messages');
     var isCurrentUser = data.user === userName;
