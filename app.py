@@ -25,7 +25,7 @@ def index():
             # 加入已有的房间
             room_code = request.form.get('room_code')
             if room_code in activate_room:   
-                return redirect(url_for('.chat', room=room_code))
+                return redirect(url_for('.chat', room=room_code,type='text'))
             else:
                 return render_template('error_join.html',room=room_code)
     return render_template('index.html')
