@@ -64,7 +64,16 @@
     <script type="text/javascript" charset="utf-8">
         var socket = io.connect('http://' + document.domain + ':' + location.port);
         var userName;
+        var avtar_color;
         var room = "{{ room }}";
+        function getRandomColor() {
+            var letters = '0123456789ABCDEF';
+            var color = '#';
+            for (var i = 0; i < 6; i++) {
+                color += letters[Math.floor(Math.random() * 16)];
+            }
+            return color;
+        }
 
         $(document).ready(function() {
             $('#usernameModal').modal({
@@ -75,6 +84,7 @@
 
         function joinChat() {
             userName = document.getElementById('username').value;
+            avtar_color = getRandomColor();
             if (userName) {
                 $('#usernameModal').modal('hide');
                 socket.emit('text_join', {username: userName, room: room});
@@ -91,7 +101,8 @@
     var messages = document.getElementById('messages');
     var isCurrentUser = data.user === userName;
     var msgClass = isCurrentUser ? 'current-user' : 'other-user';
-    var msgHtml = '<li class="list-group-item ' + msgClass + '">' + data.msg + '<br><small>' + data.user + '</small></li>';
+    var avatarHtml = '<span style="height: 30px; width: 30px; background-color: ' + data.avtar_color + '; border-radius: 50%; display: inline-block;"></span><br><small>' + data.user + '</small><br>';
+    var msgHtml = '<li class="list-group-item ' + msgClass + '">' + avatarHtml + ' ' + data.msg + '</li>';
 
     // Add the new message to the bottom of the list
     messages.innerHTML += msgHtml;
@@ -101,7 +112,7 @@
 
 function sendMessage(){
     var message = document.getElementById('message').value;
-    socket.emit('message', {msg: message, user: userName, room: room});
+    socket.emit('message', {msg: message, user: userName, room: room,avtar_color:avtar_color});
     document.getElementById('message').value = '';
 }
 
