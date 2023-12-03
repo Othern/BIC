@@ -1,7 +1,8 @@
 # 引入必要的套件
-from flask import Flask, render_template, request, redirect, url_for
+from flask import Flask, render_template, request, redirect, url_for,jsonify
 from flask_socketio import SocketIO, join_room, leave_room, send, emit
 import uuid
+import numpy as np
 
 # 建立 Flask 應用程式
 app = Flask(__name__)
@@ -11,7 +12,7 @@ socketio = SocketIO(app)
 # 紀錄啟用中的房間及使用者列表的字典
 activate_room = {}
 usersList = {}
-
+votes = {}
 # 定義首頁路由及不同表單操作的功能
 @app.route('/', methods=['GET', 'POST'])
 def index():
@@ -72,6 +73,58 @@ def on_join(data):
 
     send({'msg': username + ' has entered the room.', 'user': 'System'}, room=room)
 
+### 投票功能 ###
+@app.route('/create_vote', methods=['POST'])
+def create_vote():
+    data = request.json
+    vote_id = str(uuid.uuid4())  # 生成唯一代號
+    # 初始化每個選項的投票計數為0
+    option_counts = np.zeros(len(data['options']),dtype=int)
+    votes[vote_id] = {
+        'room': data['room'],
+        'title': data['title'],
+        'options': data['options'],
+        'multipleChoice': data['multipleChoice'],
+        'counts': option_counts.tolist() 
+    }
+    return jsonify({'vote_id': vote_id, 'title': data['title'],'multipleChoice': data['multipleChoice'], 'options': data['options']})
+
+@app.route('/submit_vote', methods=['POST'])
+def submit_vote():
+    data = request.json
+    vote_id = data['vote_id']
+    room = data['room']
+    option_index = [int(index) for index in data['option_index']]  # 從前端獲取選項索引
+    if vote_id in votes:
+        vote_data = votes[vote_id]
+        if "counts" in vote_data:
+            for index in option_index:
+                vote_data["counts"][index] += 1  # 更新計數
+            # 使用 SocketIO 發送最新的計數結果
+            socketio.emit('vote_counts_update', {'vote_id': vote_id, 'options':vote_data['options'] ,'counts': vote_data["counts"]}, room=room)
+            
+            return jsonify({'message': '投票成功', 'options':vote_data['options'] ,'counts': vote_data["counts"]})
+        else:
+            return jsonify({'message': '計數數據不存在'}), 404
+    else:
+        return jsonify({'message': '投票ID不存在'}), 404
+
+@app.route('/get_votes', methods=['POST'])
+def get_votes():
+    data = request.json
+    room = data['room']
+    # 返回所有投票資訊
+    vote_data = {}
+    if not votes:
+        for key,val in zip(votes.keys(),votes.values()):
+            if val['room'] == room:
+                vote_data[key] = val
+    return jsonify(votes)
+
+
+
+
+### 井字遊戲 ###
 # 處理遊戲開始的功能
 @socketio.on('game_started')
 def game_started(data):
@@ -97,7 +150,7 @@ def disconnect_user():
                 users.remove(user)
                 user_list = [u['username'] for u in users]
                 emit('update_users_list', {'users': user_list}, room=room)
-                disconnect()
+                #disconnect()
 
 # 處理使用者離開聊天室的功能
 @socketio.on('leave')
