@@ -101,9 +101,9 @@ def submit_vote():
             for index in option_index:
                 vote_data["counts"][index] += 1  # 更新計數
             # 使用 SocketIO 發送最新的計數結果
-            socketio.emit('vote_counts_update', {'vote_id': vote_id, 'options':vote_data['options'] ,'counts': vote_data["counts"]}, room=room)
+            socketio.emit('vote_counts_update', {'vote_id': vote_id,'titles': vote_data['title'] ,'options':vote_data['options'] ,'counts': vote_data["counts"]}, room=room)
             
-            return jsonify({'message': '投票成功', 'options':vote_data['options'] ,'counts': vote_data["counts"]})
+            return jsonify({'message': '投票成功', 'options':vote_data['options'] ,'counts': vote_data["counts"],'title': vote_data['title']})
         else:
             return jsonify({'message': '計數數據不存在'}), 404
     else:

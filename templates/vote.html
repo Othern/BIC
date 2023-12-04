@@ -1,4 +1,9 @@
 <style>
+    .scrollable-voting-container {
+    max-height: 500px; /* 您可以根据需要调整这个高度 */
+    overflow-y: auto;
+    margin-bottom: 20px; /* 提供一些底部空间 */
+}
 </style>
 <!DOCTYPE html>
 
@@ -53,8 +58,11 @@
         </div>
     </div>
 </div>
+
+
 <!-- 投票顯示區域 -->
-<div id="voting-section"></div>
+<div id="voting-section" class="scrollable-voting-container mt-3" ></div>
+
 <script>
     var room = "{{ room }}";
     function createZeroArray(n) {
@@ -89,7 +97,7 @@
         // 監聽來自服務器的投票更新
         socket.on('vote_counts_update', function(data) {
             
-            updateVoteResults(data.vote_id, data.options,data.counts);
+            updateVoteResults(data.vote_id,data.titles,data.options,data.counts);
             
         });
         // 綁定提交按鈕的點擊事件
@@ -129,7 +137,7 @@
                     createVoteTable(response.vote_id, response.title, response.options,response.multipleChoice);
                     var init_counts = createZeroArray(response.options.length);
                     
-                    updateVoteResults(response.vote_id, response.options,init_counts);
+                    //updateVoteResults(response.vote_id, response.options,init_counts);
 
                 },
                 error: function(error) {
@@ -142,7 +150,7 @@
     // 創建投票表格的函數
     function createVoteTable(voteId, title, options,multipleChoice) {
         var inputType = multipleChoice ? 'checkbox' : 'radio';
-        var tableHtml = '<div class="card mt-3"> <div class="card-header"> <h4>' + title + '</h4></div><div class="card-body"><div id="' + voteId + '"><form>';
+        var tableHtml = '<div class="card mt-3"> <div class="card-header" id="' + voteId + '"> <h4>' + title + '</h4></div><div class="card-body" id="' + voteId + '"><div ><form>';
 
         options.forEach(function(option, index) {
             tableHtml += '<div class="form-check mb-3">' +
@@ -182,7 +190,8 @@
             success: function(response) {
                 // 這裡關閉投票框
                 $('#'+voteId).remove();
-                updateVoteResults(voteId, response.options,response.counts);
+                $('#'+voteId).remove();
+                updateVoteResults(voteId, response.title,response.options,response.counts,response.title);
                 // 可以在這裡添加其他更新UI的代碼
             },
             error: function(error) {
@@ -191,13 +200,35 @@
         });
     }
     // 更新投票結果的函數
-    function updateVoteResults(voteId,options, counts) {
-        var resultHtml = '<h4>投票結果:</h4><ul>';
-        counts.forEach(function(count, index) {
-            resultHtml += '<li>' + (options[index]) + ': ' + count + ' 票</li>';
-        });
-        resultHtml += '</ul>';
+    function updateVoteResults(voteId,title,options, counts) {
+        var resultHtml = '<div class="card"><div class="card-header"><h5>' + title + ' 的投票結果:</h5></div><div class="card-body"><canvas id="voteChart-' + voteId + '"></canvas>';
+        var totalVotes = counts.reduce((a, b) => a + b, 0); // 计算总票数
+        resultHtml += '<p>總得票數: ' + totalVotes + '</p></div></div>';
         $('#voteResults-' + voteId).html(resultHtml);
+
+        var ctx = document.getElementById('voteChart-' + voteId).getContext('2d');
+        var voteChart = new Chart(ctx, {
+            type: 'bar', // 设置图表类型为横向条形图
+            data: {
+                labels: options, // 选项标签
+                datasets: [{
+                    label: '票数',
+                    data: counts, // 各选项的票数
+                    backgroundColor: 'rgba(0, 123, 255, 0.5)',
+                    borderColor: 'rgba(0, 123, 255, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                indexAxis: 'y', // 使条形图横向
+                scales: {
+                    x: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+
     }
     // 加載現有投票的函數
 
@@ -215,7 +246,7 @@
                     var voteData = response[voteId];
                     console.log(voteData);
                     createVoteTable(voteId, voteData.title, voteData.options,voteData.multipleChoice);
-                    updateVoteResults(voteId,voteData.options ,voteData.counts);
+                    //updateVoteResults(voteId,voteData.title,voteData.options ,voteData.counts);
                 });
             },
             error: function(error) {
@@ -223,6 +254,7 @@
             }
         });
     }
+    
 
 
 </script>
