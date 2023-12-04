@@ -80,13 +80,15 @@ def create_vote():
     vote_id = str(uuid.uuid4())  # 生成唯一代號
     # 初始化每個選項的投票計數為0
     option_counts = np.zeros(len(data['options']),dtype=int)
-    votes[vote_id] = {
+    temp = {
         'room': data['room'],
         'title': data['title'],
         'options': data['options'],
         'multipleChoice': data['multipleChoice'],
         'counts': option_counts.tolist() 
     }
+    votes[vote_id] = temp
+    socketio.emit('vote_create', {'vote_id': vote_id, 'title': data['title'],'multipleChoice': data['multipleChoice'], 'options': data['options']}, room=data["room"])
     return jsonify({'vote_id': vote_id, 'title': data['title'],'multipleChoice': data['multipleChoice'], 'options': data['options']})
 
 @app.route('/submit_vote', methods=['POST'])

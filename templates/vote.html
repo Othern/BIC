@@ -100,6 +100,12 @@
             updateVoteResults(data.vote_id,data.titles,data.options,data.counts);
             
         });
+
+        // 監聽來自服務器的投票更新
+        socket.on('vote_create', function(data) {
+            createVoteTable(data.vote_id,data.title, data.options,data.multipleChoice)
+            
+        });
         // 綁定提交按鈕的點擊事件
         $('#vote_create').click(function() {
             var voteTitle = $('#vote-title').val();
@@ -134,7 +140,7 @@
                     $('#voteModal').modal('hide');
                     
                     // 創建投票表格
-                    createVoteTable(response.vote_id, response.title, response.options,response.multipleChoice);
+                    //createVoteTable(response.vote_id, response.title, response.options,response.multipleChoice);
                     var init_counts = createZeroArray(response.options.length);
                     
                     //updateVoteResults(response.vote_id, response.options,init_counts);
