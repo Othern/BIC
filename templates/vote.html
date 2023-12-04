@@ -8,11 +8,6 @@
 <!DOCTYPE html>
 
 <html>
-<!-- 觸發按鈕 -->
-<button type="button" class="btn btn-primary" data-toggle="modal" data-target="#voteModal">
-    創建投票
-</button>
-<br>
 <!-- 模態框 -->
 <div class="modal fade" id="voteModal" tabindex="-1" role="dialog" aria-labelledby="voteModalLabel" aria-hidden="true">
     <div class="modal-dialog" role="document">
@@ -61,7 +56,16 @@
 
 
 <!-- 投票顯示區域 -->
-<div id="voting-section" class="scrollable-voting-container mt-3" ></div>
+<div class="card" >
+    <div class="card-header">
+        <!-- 觸發按鈕 -->
+        <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#voteModal">
+            創建投票
+        </button>
+    </div>
+    <div id="voting-section" class="scrollable-voting-container card-body" ></div>
+</div>
+
 
 <script>
     var room = "{{ room }}";
@@ -230,6 +234,14 @@
                 scales: {
                     x: {
                         beginAtZero: true
+                    },
+                    y: {
+                    display: false // 隐藏 y 轴的标签
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: false // 在最新版本中，使用这种方式隐藏图例
                     }
                 }
             }
