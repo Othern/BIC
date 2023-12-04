@@ -1,0 +1,264 @@
+<style>
+
+</style>
+<!DOCTYPE html>
+
+<html>
+    <head>
+        <meta charset="UTF-8">
+        <title>井字遊戲</title>
+        <!-- 引入 Bootstrap CSS -->
+        <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+        <style>
+            /* 自定義樣式 */
+            .game-board {
+                margin-top: 30px;
+                display: grid;
+                grid-template-columns: repeat(3, 1fr);
+                grid-gap: 5px;
+                max-width: 300px;
+                margin-left: auto;
+                margin-right: auto;
+            }
+    
+            .game-cell {
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                font-size: 36px;
+                height: 100px;
+                background-color: #e9ecef;
+                cursor: pointer;
+                transition: background-color 0.3s ease-in-out;
+            }
+    
+            .game-cell:hover {
+                background-color: #ced4da;
+            }
+        </style>
+    </head>
+<!--顯示使用者列表 -->
+<div class="modal fade" id="userListModal" tabindex="-1" role="dialog" aria-labelledby="userListModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="userListModalLabel">使用者列表</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <ul id="userList" class="list-group">
+                    <!-- 使用者列表將會在這裡動態加入 -->
+                </ul>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">關閉</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 邀請按鈕 -->
+<button type="button" class="btn btn-primary" data-toggle="modal" data-target="#userListModal">
+    查看使用者列表
+</button>    
+
+<!-- 邀請模態框 -->
+<div class="modal fade" id="invitationModal" tabindex="-1" role="dialog" aria-labelledby="invitationModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="invitationModalLabel">遊戲邀請</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body" id="invitationMessage">
+                <!-- 邀請訊息會顯示在這裡 -->
+            </div>
+            <div class="modal-footer">
+                <!-- 拒絕和接受按鈕 -->
+                <button type="button" class="btn btn-danger" onclick="rejectInvite()">拒絕</button> 
+                <button type="button" class="btn btn-success" onclick="acceptInvite()">接受</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<!-- 井字遊戲棋盤 -->
+<div class="container text-center d-none" id="gameContainer">
+    <h1 class="mt-5">井字遊戲</h1>
+    <div class="game-board">
+        <div class="game-cell" data-cell></div>
+        <div class="game-cell" data-cell></div>
+        <div class="game-cell" data-cell></div>
+        <div class="game-cell" data-cell></div>
+        <div class="game-cell" data-cell></div>
+        <div class="game-cell" data-cell></div>
+        <div class="game-cell" data-cell></div>
+        <div class="game-cell" data-cell></div>
+        <div class="game-cell" data-cell></div>
+    </div>
+    <p class="mt-3" data-winning-message></p>
+    
+    <button class="btn btn-primary mt-3" onclick="startGame()">重新開始</button>
+</div>
+
+
+
+
+
+
+<script>
+    
+// 當模態視窗顯示時，發送 GET 請求獲取使用者列表
+$('#userListModal').on('show.bs.modal', function (event) {
+    $.ajax({
+        type: 'GET',
+        url: '/get_user_list?room=' + room,
+        success: function(response) {
+            var userList = response.users;
+            var userListHTML = '';
+        
+            // 動態生成使用者列表的 HTML 內容
+            userList.forEach(function(userObj) {
+                var user = userObj.username; // 從物件中取得使用者名稱
+                userListHTML += '<li class="list-group-item">' + user + ' <button type="button" class="btn btn-primary btn-sm float-right" onclick="sendInvitation(\'' + user + '\')">邀請</button></li>';
+            });
+        
+            $('#userList').html(userListHTML);
+        },
+
+        error: function(err) {
+            console.error('無法獲取使用者列表', err);
+        }
+    });
+});
+
+//前端點擊邀請按鈕時觸發
+function sendInvitation(username) {
+    var currentUser = getCookie('username'); // 取得目前使用者的名稱
+    var room = "{{ room }}";
+
+    // 使用 Socket.IO 向特定使用者發送邀請訊息
+    socket.emit('send_invite', { sender: currentUser, receiver: username, room: room});
+}
+
+// 監聽 receive_invite 事件
+socket.on('receive_invite', function(data) {
+    var sender = data.sender;
+    var receiver = data.receiver;
+    var currentUser = getCookie('username'); // 取得目前使用者的名稱
+
+    // 判斷是否是接收到自己（當前使用者）的邀請
+    if (currentUser === receiver) {
+        // 在模態框中顯示邀請訊息
+        $('#invitationModal').modal('show');
+        var invitationMessage = sender + ' 邀請您進行遊戲。'; 
+        $('#invitationMessage').html(invitationMessage);
+    }
+});
+
+
+// 接受邀請的操作
+function acceptInvite() {
+    var sender = $('#invitationModal').find('.modal-body').text().split(' ')[0]; // 獲取邀請者名稱
+    var currentUser = getCookie('username'); // 獲取當前用戶的名字
+
+
+    // 顯示邀請者接受邀請的消息
+    var acceptMessage = currentUser + ' 接受了你的遊戲邀請。';
+    socket.emit('accept_invite', { sender: sender, receiver: currentUser, message: acceptMessage });
+
+    $('#invitationModal').modal('hide');
+
+}
+
+// 監聽被邀請者接受邀請的事件
+socket.on('invitation_accepted', function(data) {
+    var sender = data.sender;  // 邀請者的名字
+    var receiver = data.receiver;  // 被邀請者的名字
+    var message = data.message;  // 接受邀請的消息
+    var currentUser = getCookie('username'); 
+    if (currentUser === sender) {
+    // 構建顯示被邀請者接受邀請的消息的 Bootstrap Modal
+    var acceptModal = '<div class="modal" tabindex="-1" role="dialog">' +
+                        '<div class="modal-dialog" role="document">' +
+                            '<div class="modal-content">' +
+                                '<div class="modal-header">' +
+                                    '<h5 class="modal-title">邀請接受</h5>' +
+                                    '<button type="button" class="close" data-dismiss="modal" aria-label="Close">' +
+                                        '<span aria-hidden="true">&times;</span>' +
+                                    '</button>' +
+                                '</div>' +
+                                '<div class="modal-body">' +
+                                    '<p>' + message + '</p>' +
+                                '</div>' +
+                            '</div>' +
+                        '</div>' +
+                    '</div>';
+
+    // 將接受邀請的消息以 modal 的形式顯示
+    $('body').append(acceptModal);
+    $(acceptModal).modal('show');
+    }
+     //顯示棋盤
+     document.getElementById('gameContainer').classList.remove('d-none');
+});
+
+// 拒絕邀請的操作
+function rejectInvite() {
+    var sender = $('#invitationModal').find('.modal-body').text().split(' ')[0]; // 獲取邀請者名稱
+    var currentUser = getCookie('username'); // 獲取當前用戶的名字
+
+    // 顯示邀請者拒絕邀請的消息
+    var rejectMessage = currentUser + ' 拒絕了你的遊戲邀請。';
+    socket.emit('reject_invite', { sender: sender, receiver: currentUser, message: rejectMessage });
+
+    $('#invitationModal').modal('hide');
+}
+// 監聽被邀請者拒絕邀請的事件
+socket.on('invitation_rejected', function(data) {
+    var sender = data.sender;  // 邀請者的名字
+    var receiver = data.receiver;  // 被邀請者的名字
+    var message = data.message;  // 拒絕邀請的消息
+    var currentUser = getCookie('username'); 
+    if (currentUser === sender) {
+    // 構建顯示被邀請者拒絕邀請的消息的 Bootstrap Modal
+    var rejectModal = '<div class="modal" tabindex="-1" role="dialog">' +
+                        '<div class="modal-dialog" role="document">' +
+                            '<div class="modal-content">' +
+                                '<div class="modal-header">' +
+                                    '<h5 class="modal-title">邀請拒絕</h5>' +
+                                    '<button type="button" class="close" data-dismiss="modal" aria-label="Close">' +
+                                        '<span aria-hidden="true">&times;</span>' +
+                                    '</button>' +
+                                '</div>' +
+                                '<div class="modal-body">' +
+                                    '<p>' + message + '</p>' +
+                                '</div>' +
+                            '</div>' +
+                        '</div>' +
+                    '</div>';
+
+    // 將拒絕邀請的消息以 modal 的形式顯示
+    $('body').append(rejectModal);
+    $(rejectModal).modal('show');
+    }
+});
+
+
+
+
+// 函數：根據名稱取得 Cookie 的值
+function getCookie(name) {
+    var match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
+    if (match) return match[2];
+}
+    
+</script>
+
+</body>
+</html>

@@ -14,10 +14,10 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
     <body>
-        {% if type == "text" %}
             {% include 'text_chat.html' %}
-        {% else %}
-            {% include 'voice_chat.html' %}
-        {% endif %}
+            <div class="col-md-3 offset-md-2">
+                {% include 'game.html' %}
+            </div>
+            
     </body>
 </html>
