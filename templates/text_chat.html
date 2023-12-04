@@ -59,51 +59,13 @@
                     {% include './vote.html' %}
                 </div>
             </div>
-        </div>
-        <!-- 使用者列表及開始遊戲按鈕 -->
-        <div id="userListContainer" style="display: none;">
-            <h3>使用者列表</h3>
-            <select id="userSelect">
-                <!-- 用 JavaScript 動態添加用戶選項 -->
-            </select>
-            <button onclick="startGame()">開始遊戲</button>
+            </div> 
         </div>
     </div>    
     
-    <!-- 井字遊戲版面 -->
-    <div class="container mt-4">
-        <div id="gameBoard" class="game-board" style="display: none;">
-            <!-- 井字遊戲棋盤 -->
-            <div class="row justify-content-center">
-                <div class="col-md-6">
-                    <table class="table table-bordered text-center">
-                        <!-- 九宮格 -->
-                        <tr>
-                            <td class="cell" id="cell0" onclick="cellClicked(0)"></td>
-                            <td class="cell" id="cell1" onclick="cellClicked(1)"></td>
-                            <td class="cell" id="cell2" onclick="cellClicked(2)"></td>
-                        </tr>
-                        <tr>
-                            <td class="cell" id="cell3" onclick="cellClicked(3)"></td>
-                            <td class="cell" id="cell4" onclick="cellClicked(4)"></td>
-                            <td class="cell" id="cell5" onclick="cellClicked(5)"></td>
-                        </tr>
-                        <tr>
-                            <td class="cell" id="cell6" onclick="cellClicked(6)"></td>
-                            <td class="cell" id="cell7" onclick="cellClicked(7)"></td>
-                            <td class="cell" id="cell8" onclick="cellClicked(8)"></td>
-                        </tr>
-                    </table>
-                </div>
-            </div>
-            <!-- 重來跟退出按鈕區域 -->
-            <div class="row justify-content-center mt-3">
-                <button onclick="restartGame()" class="btn btn-secondary mr-2">重來</button>
-                <button onclick="exitGame()" class="btn btn-danger">退出遊戲</button>
-            </div>
-        </div>
+   
 
-    </div>
+    
 
     <!-- 使用者名稱輸入模態框 -->
     <div class="modal" tabindex="-1" role="dialog" id="usernameModal">
@@ -121,6 +83,8 @@
             </div>
         </div>
     </div>
+
+
 
     <script type="text/javascript" charset="utf-8">
         var socket = io.connect('http://' + document.domain + ':' + location.port);
@@ -197,186 +161,7 @@
                 sendMessage(); // Call the sendMessage function when Enter is pressed
             }
         }
-
-        socket.on('update_users_list', function(data) {
-            var userListContainer = document.getElementById('userListContainer');
-            userListContainer.style.display = 'block'; // 顯示使用者列表
-        
-            var userSelect = document.getElementById('userSelect');
-            userSelect.innerHTML = ''; // 清空選項列表
-        
-            data.users.forEach(function(user) {
-                var option = document.createElement('option');
-                option.value = user;
-                option.textContent = user;
-                userSelect.appendChild(option);
-            });
-        });
-
-        var currentPlayer = ''; // 當前玩家
-        var gameBoard = ['', '', '', '', '', '', '', '', '']; // 遊戲棋盤
-        var gameActive = true; // 遊戲是否進行中
-
-        // 更新遊戲狀態到伺服器
-        function updateGameState(cell) {
-            if (!gameActive) return;
-            socket.emit('game_move', { cell: cell, currentPlayer: currentPlayer, room: room });
-        }
-
-        // 接收遊戲棋盤更新
-        socket.on('update_game_board', function(data) {
-            gameBoard = data.gameBoard;
-            refreshGameBoard();
-            gameActive = data.gameActive;
-            checkGameStatus();
-        });
-
-        // 接收遊戲狀態更新
-        socket.on('game_update', function(data) {
-            gameBoard = data.gameBoard;
-            refreshGameBoard();
-            gameActive = data.gameActive;
-            checkGameStatus();
-        });
-
-        // 玩家選擇棋盤位置
-        function cellClicked(cell) {
-            if (!gameActive) return;
-
-            if (gameBoard[cell] === '') {
-                gameBoard[cell] = currentPlayer;
-                document.getElementById('cell' + cell).innerText = gameBoard[cell];
-
-                // 更新遊戲狀態
-                updateGameState(cell);
-
-                // 檢查是否有玩家贏得遊戲
-                checkGameStatus();
-
-                // 交換玩家
-                currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
-            }
-        }
-
-        // 更新遊戲狀態（勝利或平局）
-        function checkGameStatus() {
-            const winningConditions = [
-                [0, 1, 2],
-                [3, 4, 5],
-                [6, 7, 8],
-                [0, 3, 6],
-                [1, 4, 7],
-                [2, 5, 8],
-                [0, 4, 8],
-                [2, 4, 6]
-            ];
-
-            for (let i = 0; i < winningConditions.length; i++) {
-                const [a, b, c] = winningConditions[i];
-                if (gameBoard[a] !== '' && gameBoard[a] === gameBoard[b] && gameBoard[a] === gameBoard[c]) {
-                    gameActive = false;
-                    alert('玩家 ' + gameBoard[a] + ' 獲勝！');
-                    break;
-                }
-            }
-
-            if (!gameBoard.includes('') && gameActive) {
-                gameActive = false;
-                alert('遊戲結束，平局！');
-            }
-        }
-
-        // 刷新遊戲棋盤畫面
-        function refreshGameBoard() {
-            for (let i = 0; i < gameBoard.length; i++) {
-                document.getElementById('cell' + i).innerText = gameBoard[i];
-            }
-        }
-
-        // 當遊戲開始時
-        function startGame() {
-            var userSelect = document.getElementById('userSelect');
-            var selectedOption = userSelect.options[userSelect.selectedIndex];
-            var selectedUser = selectedOption.value;
-        
-            if (selectedUser) {
-                // 發送邀請給選定玩家
-                socket.emit('game_invite', { sender: userName, receiver: selectedUser, room: room });
-            } else {
-                alert('Please select a user!');
-            }
-        }
-        
-        // 接收遊戲邀請
-        socket.on('game_invite', function(data) {
-            var confirmed = confirm('您收到 ' + data.sender + ' 的遊戲邀請。是否接受？');
-            if (confirmed) {
-                // 如果接受邀請，開始遊戲
-                socket.emit('game_accepted', { sender: data.sender, receiver: data.receiver, room: data.room });
-
-                // 開始遊戲的畫面處理（這部分可能需要更多的邏輯，例如隱藏介面、顯示遊戲區域等）
-                document.getElementById('gameBoard').style.display = 'block';
-            }
-        });
-        
-        // 開始遊戲
-        socket.on('game_started', function(data) {
-            // 檢查遊戲狀態是否為開始狀態
-            if (!gameActive) {
-                gameActive = true;
-                // 開始遊戲，顯示遊戲棋盤
-                document.getElementById('gameBoard').style.display = 'block';
-            }
-        });
-        
-        // 接受遊戲邀請
-        socket.on('game_accepted', function(data) {
-            if (userName === data.receiver) {
-                // 如果是接收邀請的用戶，開始遊戲
-                socket.emit('game_started', { room: data.room });
-            }
-        });
-
-        // 顯示使用者列表並將選項加入到選擇列表
-        socket.on('update_users_list', function(data) {
-            var userListContainer = document.getElementById('userListContainer');
-            userListContainer.style.display = 'block';
-
-            var userSelect = document.getElementById('userSelect');
-            userSelect.innerHTML = '';
-
-            data.users.forEach(function(user) {
-                var option = document.createElement('option');
-                option.value = user;
-                option.textContent = user;
-                userSelect.appendChild(option);
-            });
-        });
-
-        // 重啟遊戲函式
-        function restartGame() {
-            // 清空遊戲區域，重置遊戲狀態等
-            gameBoard = ['', '', '', '', '', '', '', '', ''];
-            currentPlayer = ''; // 重置當前玩家
-            gameActive = true; // 重置遊戲狀態為進行中
-
-            // 刷新遊戲畫面
-            refreshGameBoard();
-        }
-
-        // 退出遊戲函式
-        function exitGame() {
-            // 隱藏遊戲區域
-            document.getElementById('gameBoard').style.display = 'none';
-            // 清空遊戲區域，重置遊戲狀態等
-            gameBoard = ['', '', '', '', '', '', '', '', ''];
-            currentPlayer = ''; // 重置當前玩家
-            gameActive = false; // 重置遊戲狀態為沒有進行
-
-            // 刷新遊戲畫面
-            refreshGameBoard();
-            // 可以額外加上其他退出遊戲時需要處理的邏輯
-        }
+       
         
         
         window.onbeforeunload = function() {

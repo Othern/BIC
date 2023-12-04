@@ -13,6 +13,8 @@ socketio = SocketIO(app)
 activate_room = {}
 usersList = {}
 votes = {}
+
+
 # 定義首頁路由及不同表單操作的功能
 @app.route('/', methods=['GET', 'POST'])
 def index():
@@ -68,11 +70,13 @@ def on_join(data):
         for msg in activate_room[room]:
             emit('message', msg)
 
-    user_list = [user['username'] for user in usersList[room]]
-    emit('update_users_list', {'users': user_list}, room=room)
+    # 移除重複的使用者名稱，以確保每個使用者只出現一次
+    usersList[room] = [dict(t) for t in {tuple(d.items()) for d in usersList[room]}]
 
     send({'msg': username + ' has entered the room.', 'user': 'System'}, room=room)
 
+
+    
 ### 投票功能 ###
 @app.route('/create_vote', methods=['POST'])
 def create_vote():
@@ -127,22 +131,20 @@ def get_votes():
 
 
 ### 井字遊戲 ###
-# 處理遊戲開始的功能
-@socketio.on('game_started')
-def game_started(data):
-    room = data['room']
-    opponent_username = data['opponent_username']
-    emit('game_update', {'gameBoard': activate_room[room], 'gameActive': True, 'opponent_username': opponent_username}, room=room)
+# 增加一個用於提供使用者列表的路由
+@app.route('/get_user_list', methods=['GET'])
+def get_user_list():
+    room = request.args.get('room')  # 從 GET 請求中獲取 room 參數
+    if not room:
+        return jsonify({'error': 'Missing room parameter'}), 400
 
-# 處理遊戲移動的功能
-@socketio.on('game_move')
-def game_move(data):
-    room = data['room']  
-    cell = data['cell']
-    currentPlayer = data['currentPlayer']
-    activate_room[room][cell] = currentPlayer
-    emit('update_game_board', {'gameBoard': activate_room[room], 'gameActive': True}, room=room)
-    
+    room_users = usersList.get(room, [])
+    current_user = request.cookies.get('username')
+    if current_user in room_users:
+        room_users.remove(current_user)
+
+    return jsonify({'users': room_users})
+
 # 處理使用者斷線的功能
 @socketio.on('disconnect')
 def disconnect_user():
@@ -154,29 +156,56 @@ def disconnect_user():
                 emit('update_users_list', {'users': user_list}, room=room)
                 #disconnect()
 
+# 接收並處理前端發送的邀請訊息
+@socketio.on('send_invite')
+def handle_invite(data):
+    sender = data['sender']
+    receiver_username = data['receiver']  # 接收者的名稱
+    room = data['room']
+
+    # 廣播給所有在 room 中的使用者
+    socketio.emit('receive_invite', {'sender': sender, 'receiver': receiver_username}, room=room)
+
+# 被拒絕邀請的事件
+@socketio.on('reject_invite')
+def reject_invite(data):
+    sender = data['sender']  # 邀請者的名稱
+    receiver = data['receiver']  # 被邀請者的名稱
+    message = data['message']  # 拒絕邀請的訊息
+
+    # 在這裡做相應的處理，例如向邀請者發送拒絕的訊息
+    # 透過 socketio.emit 向邀請者發送被拒絕的訊息
+    socketio.emit('invitation_rejected', {'sender': sender, 'receiver': receiver, 'message': message})
+
+# 被接受邀請的事件
+@socketio.on('accept_invite')
+def accept_invite(data):
+    sender = data['sender']  # 邀請者的名稱
+    receiver = data['receiver']  # 被邀請者的名稱
+    message = data['message']  # 接受邀請的訊息
+
+    # 在這裡做相應的處理，例如向邀請者發送接受的訊息
+    # 透過 socketio.emit 向邀請者發送被接受的訊息
+    socketio.emit('invitation_accepted', {'sender': sender, 'receiver': receiver, 'message': message})
+
+
+
+    # 發送控制下棋的訊息到前端
+    socketio.emit('show_turn', {'FirstPlayer': next_first_player, 'SecondPlayer': next_second_player}, room=room)
+
+
+
+
+
+
 # 處理使用者離開聊天室的功能
 @socketio.on('leave')
 def on_leave(data):
     username = data['username']
     room = data['room']
     leave_room(room)
-    send({'msg': username + ' has left the room.', 'user': 'System'}, room=room)
+    send({'msg': username + ' has left the room.', 'user': 'System'}, room=activate_room)
 
-# 新增邀請玩家遊戲功能
-@socketio.on('game_invite')
-def game_invite(data):
-    receiver = data['receiver']
-    sender = data['sender']
-    room = data['room']
-    emit('game_invite', {'sender': sender, 'receiver': receiver, 'room': room}, room=room)
-
-# 新增接受遊戲邀請功能
-@socketio.on('game_accepted')
-def game_accepted(data):
-    receiver = data['receiver']
-    sender = data['sender']
-    room = data['room']
-    emit('game_accepted', {'sender': sender, 'receiver': receiver, 'room': room}, room=room)
 
 # 啟動應用程式
 if __name__ == '__main__':
