@@ -15,6 +15,8 @@ usersList = {}
 votes = {}
 
 
+
+
 # 定義首頁路由及不同表單操作的功能
 @app.route('/', methods=['GET', 'POST'])
 def index():
@@ -188,15 +190,20 @@ def accept_invite(data):
     # 透過 socketio.emit 向邀請者發送被接受的訊息
     socketio.emit('invitation_accepted', {'sender': sender, 'receiver': receiver, 'message': message})
 
+#更新遊戲資訊
+@socketio.on('update_status')
+def update_status(data):
+    playerStatus = data['playerStatus']
+    boardState = data['boardState']
+    print(playerStatus)
+    print(boardState)
+    socketio.emit('NewStatus',{'playerStatus' : playerStatus,'boardState': boardState})
 
-
-    # 發送控制下棋的訊息到前端
-    socketio.emit('show_turn', {'FirstPlayer': next_first_player, 'SecondPlayer': next_second_player}, room=room)
-
-
-
-
-
+#傳送exitGame訊息到前端
+@socketio.on('exitGame')
+def exit_game(data):
+    message = data['message']
+    socketio.emit('exit_game', {'message': message})
 
 # 處理使用者離開聊天室的功能
 @socketio.on('leave')
