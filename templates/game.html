@@ -102,8 +102,8 @@
         <div class="game-cell" data-cell></div>
     </div>
     <p class="mt-3" data-winning-message></p>
-    
-    <button class="btn btn-primary mt-3" onclick="startGame()">重新開始</button>
+    <button class="btn btn-secondary mt-3" onclick="startGame()">重新開始</button>
+    <button class="btn btn-primary mt-3" onclick="exitGame()">退出</button>
 </div>
 
 
@@ -112,7 +112,9 @@
 
 
 <script>
-    
+boardState = ['', '', '', '', '', '', '', '', ''];
+playerStatus = {}
+sign = {}
 // 當模態視窗顯示時，發送 GET 請求獲取使用者列表
 $('#userListModal').on('show.bs.modal', function (event) {
     //var currentId = ;
@@ -206,9 +208,9 @@ socket.on('invitation_accepted', function(data) {
         $('body').append(acceptModal);
         $(acceptModal).modal('show');
     }
-     //顯示棋盤
-     document.getElementById('gameContainer').classList.remove('d-none');
-});
+    //開始遊戲
+    startGame(sender,receiver);
+    });
 
 // 拒絕邀請的操作
 function rejectInvite() {
@@ -251,8 +253,169 @@ socket.on('invitation_rejected', function(data) {
     }
 });
 
+//開始遊戲
+function startGame(player1,player2){
+    var room = "{{ room }}";
+    let  currentPlayer = Math.random() < 0.5 ? player1 : player2; // 定義初始玩家
+    if(player1 === currentPlayer){
+        sign[player1] = 'X';
+        sign[player2] = 'O';
+    }
+    else{
+        sign[player1] = 'O';
+        sign[player2] = 'X';
+    }
+    const cells = document.querySelectorAll('[data-cell]');
+    cells.forEach(cell => {
+        cell.innerText = '';
+        cell.classList.remove('X', 'O', 'won');
+        cell.addEventListener('click', handleClick, { once: true });
+    });
+    //顯示棋盤
+    document.getElementById('gameContainer').classList.remove('d-none');
+    boardState = Array.from(cells).map(cell => cell.innerText);
+    playerStatus = {
+        'players':[player1,player2],
+        'currentPlayer':currentPlayer
+    }
+    
+    socket.emit('update_status',{playerStatus: playerStatus,boardState: boardState, room: room})
+    
+}
+socket.on('NewStatus', function(data){
+    playerStatus = data.playerStatus
+    boardState = data.boardState
+
+    const cells = document.querySelectorAll('[data-cell]');
+    cells.forEach((cell, index) => {
+        cell.innerText = boardState[index];
+    });
+});
 
 
+
+// 當棋盤上的格子被點擊時觸發
+function handleClick(event) {
+    var room = '{{room}}';
+    var currentUser = getCookie('username'); 
+    if(playerStatus['currentPlayer'] === currentUser){
+        const cell = event.target;
+        // 如果該格子已經有棋子或者遊戲已經結束，則返回
+        if (cell.textContent !== '' || checkWin()) return;
+        placeMark(cell);
+        if (checkWin()) {
+            endGame(false);
+        } else if (isDraw()) {
+            endGame(true);
+        }
+        else{
+            swapTurns(); // 在這裡進行玩家輪次切換
+        }
+        
+    }   
+
+}
+
+// 放置玩家標記（X 或 O）在選定的格子中
+function placeMark(cell) {
+    const currentPlayer = playerStatus['currentPlayer'];
+    const currentPlayerSign = sign[currentPlayer];
+
+    cell.innerText = currentPlayerSign;
+    cell.classList.add(currentPlayerSign);
+
+    const cells = document.querySelectorAll('[data-cell]');
+    boardState = Array.from(cells).map(cell => cell.innerText); // 將當前格子的內容存到 boardState 中的相應索引位置
+
+}
+
+// 交換玩家的回合
+function swapTurns() {
+    if(playerStatus['currentPlayer'] === playerStatus['players'][0]){
+        playerStatus['currentPlayer'] = playerStatus['players'][1];
+     
+    }
+    else{
+        playerStatus['currentPlayer'] = playerStatus['players'][0];
+    }
+    playerStatus = playerStatus;
+    // 向後端發送更新遊戲狀態的訊息
+    socket.emit('update_status', { playerStatus: playerStatus, boardState: boardState });
+}
+
+// 檢查勝利條件
+function checkWin() {
+    const cells = document.querySelectorAll('[data-cell]');
+    const winCombinations = [
+        [0, 1, 2],
+        [3, 4, 5],
+        [6, 7, 8],
+        [0, 3, 6],
+        [1, 4, 7],
+        [2, 5, 8],
+        [0, 4, 8],
+        [2, 4, 6]
+    ];
+
+    return winCombinations.some(combination => {
+        return combination.every(index => {
+            return cells[index].innerText === sign[playerStatus['currentPlayer']];
+        });
+    });
+}
+
+// 判斷是否平局
+function isDraw() {
+    const cells = document.querySelectorAll('[data-cell]');
+    return [...cells].every(cell => {
+        return cell.innerText !== '';
+    });
+}
+
+// 遊戲結束
+function endGame(draw) {
+    const winningMessageElement = document.querySelector('[data-winning-message]');
+    if (draw) {
+        winningMessageElement.innerText = '遊戲結束，平局!';
+    } else {
+        winningMessageElement.innerText = `遊戲結束，${playerStatus['currentPlayer']} 獲勝!`;
+    }
+    // Remove the click event listener from all cells to stop the game
+    const cells = document.querySelectorAll('[data-cell]');
+    cells.forEach(cell => {
+        cell.removeEventListener('click', handleClick);
+    });
+    boardState = Array.from(cells).map(cell => cell.innerText); // 取得當前的棋盤狀態
+    playerStatus = playerStatus;
+    // 向後端發送更新遊戲狀態的訊息
+    socket.emit('update_status', { playerStatus: playerStatus, boardState: boardState });
+}
+
+//退出遊戲
+function exitGame(){
+    var currentUser = getCookie('username');
+     // 顯示玩家退出遊戲的消息
+     var exitMessage = currentUser + '退出了遊戲';
+     socket.emit('exitGame', { 'message': exitMessage});
+    
+}
+
+//處理後端發送exit_game的操作
+socket.on('exit_game', function(data){
+    var currentUser = getCookie('username'); 
+    var message = data.message
+    
+    const cells = document.querySelectorAll('[data-cell]');
+    cells.forEach(cell => {
+        cell.innerText = '';
+        cell.classList.remove('X', 'O', 'won');
+    });
+    boardState = Array.from(cells).map(cell => cell.innerText);
+    playerStatus = {}
+    socket.emit('update_status',{playerStatus: playerStatus,boardState: boardState, room: room})
+    //隱藏棋盤
+    document.getElementById('gameContainer').classList.add('d-none');
+});
 
 // 函數：根據名稱取得 Cookie 的值
 function getCookie(name) {

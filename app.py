@@ -17,6 +17,8 @@ usersList = {}
 votes = {}
 
 
+
+
 # 定義首頁路由及不同表單操作的功能
 @app.route('/', methods=['GET', 'POST'])
 def index():
@@ -211,8 +213,25 @@ def accept_invite(data):
     socketio.emit('invitation_accepted', {'sender': sender, 'receiver': receiver, 'message': message})
 
 
+#更新遊戲資訊
+@socketio.on('update_status')
+def update_status(data):
+    playerStatus = data['playerStatus']
+    boardState = data['boardState']
+    print(playerStatus)
+    print(boardState)
+    socketio.emit('NewStatus',{'playerStatus' : playerStatus,'boardState': boardState})
+
+#傳送exitGame訊息到前端
+@socketio.on('exitGame')
+def exit_game(data):
+    message = data['message']
+    socketio.emit('exit_game', {'message': message})
+
+
 
     
+
 
 
 
