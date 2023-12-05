@@ -115,6 +115,7 @@
     
 // 當模態視窗顯示時，發送 GET 請求獲取使用者列表
 $('#userListModal').on('show.bs.modal', function (event) {
+    //var currentId = ;
     $.ajax({
         type: 'GET',
         url: '/get_user_list?room=' + room,
@@ -183,26 +184,27 @@ socket.on('invitation_accepted', function(data) {
     var message = data.message;  // 接受邀請的消息
     var currentUser = getCookie('username'); 
     if (currentUser === sender) {
-    // 構建顯示被邀請者接受邀請的消息的 Bootstrap Modal
-    var acceptModal = '<div class="modal" tabindex="-1" role="dialog">' +
-                        '<div class="modal-dialog" role="document">' +
-                            '<div class="modal-content">' +
-                                '<div class="modal-header">' +
-                                    '<h5 class="modal-title">邀請接受</h5>' +
-                                    '<button type="button" class="close" data-dismiss="modal" aria-label="Close">' +
-                                        '<span aria-hidden="true">&times;</span>' +
-                                    '</button>' +
-                                '</div>' +
-                                '<div class="modal-body">' +
-                                    '<p>' + message + '</p>' +
+        // 構建顯示被邀請者接受邀請的消息的 Bootstrap Modal
+        var acceptModal = '<div class="modal" tabindex="-1" role="dialog">' +
+                            '<div class="modal-dialog" role="document">' +
+                                '<div class="modal-content">' +
+                                    '<div class="modal-header">' +
+                                        '<h5 class="modal-title">邀請接受</h5>' +
+                                        '<button type="button" class="close" data-dismiss="modal" aria-label="Close">' +
+                                            '<span aria-hidden="true">&times;</span>' +
+                                        '</button>' +
+                                    '</div>' +
+                                    '<div class="modal-body">' +
+                                        '<p>' + message + '</p>' +
+                                    '</div>' +
                                 '</div>' +
                             '</div>' +
-                        '</div>' +
-                    '</div>';
-
-    // 將接受邀請的消息以 modal 的形式顯示
-    $('body').append(acceptModal);
-    $(acceptModal).modal('show');
+                        '</div>';
+        
+        $('#userListModal').modal('hide');
+        // 將接受邀請的消息以 modal 的形式顯示
+        $('body').append(acceptModal);
+        $(acceptModal).modal('show');
     }
      //顯示棋盤
      document.getElementById('gameContainer').classList.remove('d-none');

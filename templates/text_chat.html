@@ -74,12 +74,15 @@
                 <div class="modal-header">
                     <h5 class="modal-title">請輸入您的使用者名稱</h5>
                 </div>
+                <form method="post" action="/joinTextChat">
                 <div class="modal-body">
                     <input type="text" id="username" class="form-control" placeholder="Username">
                 </div>
+                </form>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-primary" onclick="joinChat()">加入聊天</button>
                 </div>
+                
             </div>
         </div>
     </div>
@@ -106,19 +109,31 @@
                 keyboard: false
             });
         });
-
-        function joinChat() {
-            userName = document.getElementById('username').value;
-            avtar_color = getRandomColor();
-            if (userName) {
-                // 设置用户名的 Cookie
-                document.cookie = "username=" + userName + "; path=/";  // 这里的 path=/ 表示 Cookie 可以在整个站点中使用
         
-                $('#usernameModal').modal('hide');
-                socket.emit('text_join', {username: userName, room: room});
-            } else {
-                alert('Please enter a username.');
-            } 
+        function joinChat() {
+            var username = $('#username').val();
+            $.ajax({
+                type: "POST",
+                url: "/joinTextChat",
+                contentType: "application/json;charset=UTF-8",
+                data: JSON.stringify({
+                    userName :username,
+                    room : room
+                }),
+                success: function(response) {
+                    avtar_color = getRandomColor();
+                    // 隱藏模態框
+                    $('#usernameModal').modal('hide');
+                    document.cookie = "username=" + response.userName + "; path=/";  // 这里的 path=/ 表示 Cookie 可以在整个站点中使用
+                    document.cookie = "uid" + response.uid + "; path=/";  // 这里的 path=/ 表示 Cookie 可以在整个站点中使用
+                    socket.emit('text_join', {'username': response.userName, 'room': response.room});
+
+                },
+                error: function(error) {
+                    alert('Please enter a username.');
+                }
+            });
+
         }
         
 

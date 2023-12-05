@@ -53,28 +53,30 @@ def handle_message(data):
     activate_room[room].append(data)
     send(data, room=room)
 
+@app.route('/joinTextChat', methods=['POST'])    
+def join_chat():
+    uid = uuid.uuid4().hex[:6]
+    data = request.json
+    username = data['userName']
+    room = data['room']
+    if room not in usersList:
+        usersList[room] = []
+
+    user_info = {'username': username, 'uid': uid}
+    usersList[room].append(user_info)
+    print(usersList)
+    if room in activate_room:
+        for msg in activate_room[room]:
+            emit('message', msg)
+    return jsonify({'userName': username,'room': room ,'uid':uid})
+
 # 處理使用者加入聊天室的功能
 @socketio.on('text_join')
 def on_join(data):
     username = data['username']
     room = data['room']
     join_room(room)
-
-    if room not in usersList:
-        usersList[room] = []
-
-    user_info = {'username': username, 'sid': request.sid}
-    usersList[room].append(user_info)
-
-    if room in activate_room:
-        for msg in activate_room[room]:
-            emit('message', msg)
-
-    # 移除重複的使用者名稱，以確保每個使用者只出現一次
-    usersList[room] = [dict(t) for t in {tuple(d.items()) for d in usersList[room]}]
-
     send({'msg': username + ' has entered the room.', 'user': 'System'}, room=room)
-
 
     
 ### 投票功能 ###
@@ -150,12 +152,14 @@ def get_user_list():
 def disconnect_user():
     for room, users in usersList.items():
         for user in users:
+            """
             if user['sid'] == request.sid:
                 users.remove(user)
                 user_list = [u['username'] for u in users]
                 emit('update_users_list', {'users': user_list}, room=room)
                 #disconnect()
-
+            """
+            print("djfkdjf")
 # 接收並處理前端發送的邀請訊息
 @socketio.on('send_invite')
 def handle_invite(data):
@@ -190,9 +194,7 @@ def accept_invite(data):
 
 
 
-    # 發送控制下棋的訊息到前端
-    socketio.emit('show_turn', {'FirstPlayer': next_first_player, 'SecondPlayer': next_second_player}, room=room)
-
+    
 
 
 
