@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OG Thumbnail Demo</title>
+</head>
+<body>
+
+<!-- 空的圖片標籤，用來顯示從 OG 取得的圖片 -->
+<img id="ogImage" alt="OG Thumbnail">
+
+<script>
+    // 當頁面載入完成後執行
+    window.onload = function () {
+        // 目標網站的 URL
+        var targetUrl = 'https://hackmd.io/@A-Min-Design/BJjeU3OuY';
+
+        // 使用 fetch 函數獲取網頁內容
+        fetch(targetUrl)
+            .then(response => response.text())
+            .then(html => {
+                // 將網頁內容轉換成 DOM 物件
+                var parser = new DOMParser();
+                var doc = parser.parseFromString(html, 'text/html');
+
+                // 從 OG 標籤中獲取圖片 URL
+                var ogImageElement = doc.querySelector('meta[property="og:image"]');
+                var ogImageUrl = ogImageElement ? ogImageElement.getAttribute('content') : null;
+
+                // 將圖片 URL 設定到 HTML 中的 img 標籤上
+                var imgElement = document.getElementById('ogImage');
+                if (ogImageUrl) {
+                    imgElement.src = ogImageUrl;
+                } else {
+                    imgElement.src = '預設的圖片URL';
+                }
+            })
+            .catch(error => console.error('Error fetching page:', error));
+    };
+</script>
+
+</body>
+</html>
+
+
+

@@ -3,6 +3,8 @@ from flask import Flask, render_template, request, redirect, url_for,jsonify
 from flask_socketio import SocketIO, join_room, leave_room, send, emit
 import uuid
 import numpy as np
+from scratch_url_preview import get_preview
+import re
 
 # 建立 Flask 應用程式
 app = Flask(__name__)
@@ -51,30 +53,47 @@ def handle_message(data):
     if room not in activate_room:
         activate_room[room] = []
     activate_room[room].append(data)
+
+    # 使用正規表達式搜尋第一個網址
+    url_pattern = re.compile(r'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\\(\\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+')
+    match = url_pattern.search(data['msg'])
+    
+    if match:
+        first_url = match.group()
+        
+        data['link'] = first_url
+        data.update(get_preview(first_url))
     send(data, room=room)
 
 @app.route('/joinTextChat', methods=['POST'])    
 def join_chat():
     uid = uuid.uuid4().hex[:6]
     data = request.json
-    username = data['userName']
+    username = data['username']
     room = data['room']
     if room not in usersList:
         usersList[room] = []
 
     user_info = {'username': username, 'uid': uid}
     usersList[room].append(user_info)
-    print(usersList)
-    if room in activate_room:
-        for msg in activate_room[room]:
-            emit('message', msg)
-    return jsonify({'userName': username,'room': room ,'uid':uid})
+    
+    return jsonify({'username': username,'room': room ,'uid':uid})
 
 # 處理使用者加入聊天室的功能
 @socketio.on('text_join')
 def on_join(data):
     username = data['username']
     room = data['room']
+
+    if room in activate_room:
+        for msg in activate_room[room]:
+            emit('message', msg)
+
+    for i,d in enumerate(usersList[room]):
+        if d['username'] == username:
+            usersList[room][i]['sid']= request.sid
+            break
+    print(usersList)
     join_room(room)
     send({'msg': username + ' has entered the room.', 'user': 'System'}, room=room)
 
@@ -152,14 +171,13 @@ def get_user_list():
 def disconnect_user():
     for room, users in usersList.items():
         for user in users:
-            """
             if user['sid'] == request.sid:
                 users.remove(user)
                 user_list = [u['username'] for u in users]
                 emit('update_users_list', {'users': user_list}, room=room)
                 #disconnect()
-            """
-            print("djfkdjf")
+
+            
 # 接收並處理前端發送的邀請訊息
 @socketio.on('send_invite')
 def handle_invite(data):
