@@ -74,12 +74,15 @@
                 <div class="modal-header">
                     <h5 class="modal-title">請輸入您的使用者名稱</h5>
                 </div>
+                <form method="post" action="/joinTextChat">
                 <div class="modal-body">
-                    <input type="text" id="username" class="form-control" placeholder="Username">
+                    <input type="text" id="username" class="form-control" placeholder="username">
                 </div>
+                </form>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-primary" onclick="joinChat()">加入聊天</button>
                 </div>
+                
             </div>
         </div>
     </div>
@@ -88,7 +91,7 @@
 
     <script type="text/javascript" charset="utf-8">
         var socket = io.connect('http://' + document.domain + ':' + location.port);
-        var userName;
+        var username;
         var avtar_color;
         var room = "{{ room }}";
         function getRandomColor() {
@@ -99,26 +102,44 @@
             }
             return color;
         }
-
+        // Function to truncate a string to a specified length
+        function truncateString(str, maxLength) {
+            if (str.length > maxLength) {
+                return str.slice(0, maxLength) + '...';
+            }
+            return str;
+        }
         $(document).ready(function() {
             $('#usernameModal').modal({
                 backdrop: 'static',
                 keyboard: false
             });
         });
-
-        function joinChat() {
-            userName = document.getElementById('username').value;
-            avtar_color = getRandomColor();
-            if (userName) {
-                // 设置用户名的 Cookie
-                document.cookie = "username=" + userName + "; path=/";  // 这里的 path=/ 表示 Cookie 可以在整个站点中使用
         
-                $('#usernameModal').modal('hide');
-                socket.emit('text_join', {username: userName, room: room});
-            } else {
-                alert('Please enter a username.');
-            } 
+        function joinChat() {
+            username = $('#username').val();
+            $.ajax({
+                type: "POST",
+                url: "/joinTextChat",
+                contentType: "application/json;charset=UTF-8",
+                data: JSON.stringify({
+                    username :username,
+                    room : room
+                }),
+                success: function(response) {
+                    avtar_color = getRandomColor();
+                    // 隱藏模態框
+                    $('#usernameModal').modal('hide');
+                    document.cookie = "username=" + response.username + "; path=/";  // 这里的 path=/ 表示 Cookie 可以在整个站点中使用
+                    document.cookie = "uid" + response.uid + "; path=/";  // 这里的 path=/ 表示 Cookie 可以在整个站点中使用
+                    socket.emit('text_join', {'username': response.username, 'room': response.room});
+
+                },
+                error: function(error) {
+                    alert('Please enter a username.');
+                }
+            });
+
         }
         
 
@@ -133,10 +154,48 @@
         });
         socket.on('message', function(data) {
             var messages = document.getElementById('messages');
-            var isCurrentUser = data.user === userName;
+            var isCurrentUser = data.user === username;
             var msgClass = isCurrentUser ? 'current-user' : 'other-user';
+
+            // Create HTML for the avatar
             var avatarHtml = '<span style="height: 30px; width: 30px; background-color: ' + data.avtar_color + '; border-radius: 50%; display: inline-block;"></span><br><small>' + data.user + '</small><br>';
-            var msgHtml = '<li class="list-group-item ' + msgClass + '">' + avatarHtml + ' ' + data.msg + '</li>';
+
+            // Create HTML for the message content
+            var msgContentHtml = '';
+
+            // Add the message text
+            msgContentHtml += '<p>' + data.msg + '</p>';
+
+            // Check if the message contains a link
+            if (data.link) {
+                msgContentHtml += '<a href="' + data.link + '" target="_blank" class="btn btn-link">';
+            }
+
+            // Check if the message contains an image
+            if (data.link_image) {
+                msgContentHtml += '<div class="row">'+
+                                    '<div class="col-md-4 order-md-1 mb-2">'+
+                                        '<img src="' + data.link_image + '" alt="Image" class="img-fluid">'+
+                                    '</div>' +
+                                    '<div class="col-md-8 order-md-2">';
+            }
+
+            // Check if the message contains a title
+            if (data.link_title) {
+                msgContentHtml += '<h4 class="mb-2" text-truncate>' + truncateString(data.link_title, 20) + '</h4>';
+            }
+            if (data.link_description) {
+                msgContentHtml += '<p class="mb-2" text-truncate>' + truncateString(data.link_description, 60) + '</p>';
+            }
+            // Close the link tag if a link was present
+            if (data.link) {
+                msgContentHtml += '</div></div></a>';
+            }
+            console.log("j")
+            // Create the final message HTML with Bootstrap classes
+            var msgHtml = '<li class="list-group-item ' + msgClass + ' ">' + 
+                            '<div class="ms-2 me-auto">' + avatarHtml + msgContentHtml + '</div>' +
+                            '</li>';
 
             // Add the new message to the bottom of the list
             messages.innerHTML += msgHtml;
@@ -144,9 +203,10 @@
             scrollToBottom(); // Scroll to the bottom after adding the new message
         });
 
+
         function sendMessage(){
             var message = document.getElementById('message').value;
-            socket.emit('message', {msg: message, user: userName, room: room,avtar_color:avtar_color});
+            socket.emit('message', {msg: message, user: username, room: room,avtar_color:avtar_color});
             document.getElementById('message').value = '';
         }
 
@@ -165,7 +225,7 @@
         
         
         window.onbeforeunload = function() {
-            socket.emit('leave', {username: userName, room: room});
+            socket.emit('leave', {username: username, room: room});
         };
     </script>
 

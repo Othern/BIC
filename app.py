@@ -3,6 +3,8 @@ from flask import Flask, render_template, request, redirect, url_for,jsonify
 from flask_socketio import SocketIO, join_room, leave_room, send, emit
 import uuid
 import numpy as np
+from scratch_url_preview import get_preview
+import re
 
 # 建立 Flask 應用程式
 app = Flask(__name__)
@@ -53,30 +55,49 @@ def handle_message(data):
     if room not in activate_room:
         activate_room[room] = []
     activate_room[room].append(data)
+
+    # 使用正規表達式搜尋第一個網址
+    url_pattern = re.compile(r'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\\(\\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+')
+    match = url_pattern.search(data['msg'])
+    
+    if match:
+        first_url = match.group()
+        
+        data['link'] = first_url
+        data.update(get_preview(first_url))
     send(data, room=room)
+
+@app.route('/joinTextChat', methods=['POST'])    
+def join_chat():
+    uid = uuid.uuid4().hex[:6]
+    data = request.json
+    username = data['username']
+    room = data['room']
+    if room not in usersList:
+        usersList[room] = []
+
+    user_info = {'username': username, 'uid': uid}
+    usersList[room].append(user_info)
+    
+    return jsonify({'username': username,'room': room ,'uid':uid})
 
 # 處理使用者加入聊天室的功能
 @socketio.on('text_join')
 def on_join(data):
     username = data['username']
     room = data['room']
-    join_room(room)
-
-    if room not in usersList:
-        usersList[room] = []
-
-    user_info = {'username': username, 'sid': request.sid}
-    usersList[room].append(user_info)
 
     if room in activate_room:
         for msg in activate_room[room]:
             emit('message', msg)
 
-    # 移除重複的使用者名稱，以確保每個使用者只出現一次
-    usersList[room] = [dict(t) for t in {tuple(d.items()) for d in usersList[room]}]
-
+    for i,d in enumerate(usersList[room]):
+        if d['username'] == username:
+            usersList[room][i]['sid']= request.sid
+            break
+    print(usersList)
+    join_room(room)
     send({'msg': username + ' has entered the room.', 'user': 'System'}, room=room)
-
 
     
 ### 投票功能 ###
@@ -158,6 +179,7 @@ def disconnect_user():
                 emit('update_users_list', {'users': user_list}, room=room)
                 #disconnect()
 
+            
 # 接收並處理前端發送的邀請訊息
 @socketio.on('send_invite')
 def handle_invite(data):
@@ -190,6 +212,7 @@ def accept_invite(data):
     # 透過 socketio.emit 向邀請者發送被接受的訊息
     socketio.emit('invitation_accepted', {'sender': sender, 'receiver': receiver, 'message': message})
 
+
 #更新遊戲資訊
 @socketio.on('update_status')
 def update_status(data):
@@ -204,6 +227,15 @@ def update_status(data):
 def exit_game(data):
     message = data['message']
     socketio.emit('exit_game', {'message': message})
+
+
+
+    
+
+
+
+
+
 
 # 處理使用者離開聊天室的功能
 @socketio.on('leave')
