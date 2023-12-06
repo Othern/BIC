@@ -217,9 +217,15 @@ def accept_invite(data):
 def update_status(data):
     playerStatus = data['playerStatus']
     boardState = data['boardState']
+    sign = data['sign']
     print(playerStatus)
     print(boardState)
-    socketio.emit('NewStatus',{'playerStatus' : playerStatus,'boardState': boardState})
+    print(sign)
+    socketio.emit('NewStatus',{'playerStatus' : playerStatus,'boardState': boardState,'sign':sign})
+#重新開始遊戲
+@socketio.on('restartGame')
+def restartGame():
+    socketio.emit('restart_game')
 
 #傳送exitGame訊息到前端
 @socketio.on('exitGame')
