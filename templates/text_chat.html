@@ -207,7 +207,7 @@
         function sendMessage(){
             var message = document.getElementById('message').value;
             socket.emit('message', {msg: message, user: username, room: room,avtar_color:avtar_color});
-            document.getElementById('message').value = '';
+            $('#message').val('');
         }
 
         function scrollToBottom() {

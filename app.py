@@ -69,7 +69,7 @@ def handle_message(data):
 
 @app.route('/joinTextChat', methods=['POST'])    
 def join_chat():
-    uid = uuid.uuid4().hex[:6]
+    uid = str(uuid.uuid4().hex[:6])
     data = request.json
     username = data['username']
     room = data['room']
@@ -95,7 +95,6 @@ def on_join(data):
         if d['username'] == username:
             usersList[room][i]['sid']= request.sid
             break
-    print(usersList)
     join_room(room)
     send({'msg': username + ' has entered the room.', 'user': 'System'}, room=room)
 
@@ -227,15 +226,6 @@ def update_status(data):
 def exit_game(data):
     message = data['message']
     socketio.emit('exit_game', {'message': message})
-
-
-
-    
-
-
-
-
-
 
 # 處理使用者離開聊天室的功能
 @socketio.on('leave')
