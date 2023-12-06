@@ -76,7 +76,7 @@
                 </div>
                 <form method="post" action="/joinTextChat">
                 <div class="modal-body">
-                    <input type="text" id="username" class="form-control" placeholder="username">
+                    <input type="text" id="username" class="form-control" placeholder="username" onkeydown="return (event.key != 'Enter');">
                 </div>
                 </form>
                 <div class="modal-footer">
@@ -115,7 +115,7 @@
                 keyboard: false
             });
         });
-        
+
         function joinChat() {
             username = $('#username').val();
             $.ajax({
