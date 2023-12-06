@@ -102,7 +102,7 @@
         <div class="game-cell" data-cell></div>
     </div>
     <p class="mt-3" data-winning-message></p>
-    <button class="btn btn-secondary mt-3" onclick="startGame()">重新開始</button>
+    <button class="btn btn-secondary mt-3" onclick="restartGame()">重新開始</button>
     <button class="btn btn-primary mt-3" onclick="exitGame()">退出</button>
 </div>
 
@@ -279,18 +279,28 @@ function startGame(player1,player2){
         'currentPlayer':currentPlayer
     }
     
-    socket.emit('update_status',{playerStatus: playerStatus,boardState: boardState, room: room})
+    socket.emit('update_status', { playerStatus: playerStatus, boardState: boardState,sign : sign ,room,room})
     
 }
 socket.on('NewStatus', function(data){
     playerStatus = data.playerStatus
     boardState = data.boardState
-
+    sign = data.sign
     const cells = document.querySelectorAll('[data-cell]');
     cells.forEach((cell, index) => {
         cell.innerText = boardState[index];
     });
 });
+
+function restartGame(){
+    socket.emit('restartGame');
+
+}
+socket.on('restart_game',function(){
+
+    startGame(playerStatus['players'][0],playerStatus['players'][1]);
+});
+
 
 
 
@@ -340,7 +350,7 @@ function swapTurns() {
     }
     playerStatus = playerStatus;
     // 向後端發送更新遊戲狀態的訊息
-    socket.emit('update_status', { playerStatus: playerStatus, boardState: boardState });
+    socket.emit('update_status', { playerStatus: playerStatus, boardState: boardState,sign : sign ,room,room})
 }
 
 // 檢查勝利條件
@@ -380,15 +390,18 @@ function endGame(draw) {
     } else {
         winningMessageElement.innerText = `遊戲結束，${playerStatus['currentPlayer']} 獲勝!`;
     }
-    // Remove the click event listener from all cells to stop the game
-    const cells = document.querySelectorAll('[data-cell]');
-    cells.forEach(cell => {
-        cell.removeEventListener('click', handleClick);
-    });
     boardState = Array.from(cells).map(cell => cell.innerText); // 取得當前的棋盤狀態
+    sign[playerStatus['players'][0]] = '';
+    sign[playerStatus['players'][1]] = '';
     playerStatus = playerStatus;
     // 向後端發送更新遊戲狀態的訊息
-    socket.emit('update_status', { playerStatus: playerStatus, boardState: boardState });
+    const cells = document.querySelectorAll('[data-cell]');
+    cells.forEach(cell => {
+        cell.innerText = '';
+        cell.classList.remove('X', 'O', 'won');
+    });
+    
+    socket.emit('update_status', { playerStatus: playerStatus, boardState: boardState,sign : sign });
 }
 
 //退出遊戲
@@ -409,10 +422,12 @@ socket.on('exit_game', function(data){
     cells.forEach(cell => {
         cell.innerText = '';
         cell.classList.remove('X', 'O', 'won');
+        cell.removeEventListener('click', handleClick);
     });
+    
     boardState = Array.from(cells).map(cell => cell.innerText);
     playerStatus = {}
-    socket.emit('update_status',{playerStatus: playerStatus,boardState: boardState, room: room})
+    socket.emit('update_status', { playerStatus: playerStatus, boardState: boardState,sign : sign ,room,room})
     //隱藏棋盤
     document.getElementById('gameContainer').classList.add('d-none');
 });
