@@ -211,17 +211,57 @@ def accept_invite(data):
     # 透過 socketio.emit 向邀請者發送被接受的訊息
     socketio.emit('invitation_accepted', {'sender': sender, 'receiver': receiver, 'message': message})
 
-
+#標記處理
+@socketio.on('sendMark')
+def endGame(data):
+    room = data['room']
+    sign = data['sign']
+    mark = {'cell_id' : data['cell_id'],
+            'currentPlayerSign' :  data['currentPlayerSign']}
+    players_sid = []
+    players = list(sign.keys())
+    
+    for p in usersList[room]:
+        if p['username'] in players:
+            players_sid.append(p['sid'])
+        if len(players_sid) == 2:
+            break
+    socketio.emit('placeMark',mark,to=players_sid)
 #更新遊戲資訊
 @socketio.on('update_status')
 def update_status(data):
     playerStatus = data['playerStatus']
     boardState = data['boardState']
     sign = data['sign']
+    room = data['room']
+    players_sid = []
+    players = list(sign.keys())
     print(playerStatus)
     print(boardState)
     print(sign)
-    socketio.emit('NewStatus',{'playerStatus' : playerStatus,'boardState': boardState,'sign':sign})
+    for p in usersList[room]:
+        if p['username'] in players:
+            players_sid.append(p['sid'])
+        if len(players_sid) == 2:
+            break
+    socketio.emit('NewStatus',{'playerStatus' : playerStatus,'boardState': boardState,'sign':sign},to=players_sid)
+
+# 傳送遊戲結束標語
+@socketio.on('endGame')
+def endGame(data):
+    room = data['room']
+    msg = data['msg']
+    sign = data['sign']
+    players_sid = []
+    players = list(sign.keys())
+    
+    for p in usersList[room]:
+        if p['username'] in players:
+            players_sid.append(p['sid'])
+        if len(players_sid) == 2:
+            break
+    socketio.emit('endGameMsg',{'msg' : msg},to=players_sid)
+    
 #重新開始遊戲
 @socketio.on('restartGame')
 def restartGame():
