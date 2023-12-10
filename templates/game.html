@@ -91,15 +91,15 @@
 <div class="container text-center d-none" id="gameContainer">
     <h1 class="mt-5">井字遊戲</h1>
     <div class="game-board">
-        <div class="game-cell" data-cell></div>
-        <div class="game-cell" data-cell></div>
-        <div class="game-cell" data-cell></div>
-        <div class="game-cell" data-cell></div>
-        <div class="game-cell" data-cell></div>
-        <div class="game-cell" data-cell></div>
-        <div class="game-cell" data-cell></div>
-        <div class="game-cell" data-cell></div>
-        <div class="game-cell" data-cell></div>
+        <div class="game-cell" data-cell id = "game-cell1"></div>
+        <div class="game-cell" data-cell id = "game-cell2"></div>
+        <div class="game-cell" data-cell id = "game-cell3"></div>
+        <div class="game-cell" data-cell id = "game-cell4"></div>
+        <div class="game-cell" data-cell id = "game-cell5"></div>
+        <div class="game-cell" data-cell id = "game-cell6"></div>
+        <div class="game-cell" data-cell id = "game-cell7"></div>
+        <div class="game-cell" data-cell id = "game-cell8"></div>
+        <div class="game-cell" data-cell id = "game-cell9"></div>
     </div>
     <p class="mt-3" data-winning-message></p>
     <button class="btn btn-secondary mt-3" onclick="restartGame()">重新開始</button>
@@ -112,7 +112,7 @@
 
 
 <script>
-boardState = ['', '', '', '', '', '', '', '', ''];
+var boardState ;
 playerStatus = {}
 sign = {}
 // 當模態視窗顯示時，發送 GET 請求獲取使用者列表
@@ -128,7 +128,9 @@ $('#userListModal').on('show.bs.modal', function (event) {
             // 動態生成使用者列表的 HTML 內容
             userList.forEach(function(userObj) {
                 var user = userObj.username; // 從物件中取得使用者名稱
-                userListHTML += '<li class="list-group-item">' + user + ' <button type="button" class="btn btn-primary btn-sm float-right" onclick="sendInvitation(\'' + user + '\')">邀請</button></li>';
+                if(user != username){
+                    userListHTML += '<li class="list-group-item">' + user + ' <button type="button" class="btn btn-primary btn-sm float-right" onclick="sendInvitation(\'' + user + '\')">邀請</button></li>';
+                }
             });
         
             $('#userList').html(userListHTML);
@@ -279,17 +281,20 @@ function startGame(player1,player2){
         'currentPlayer':currentPlayer
     }
     
-    socket.emit('update_status', { playerStatus: playerStatus, boardState: boardState,sign : sign ,room,room})
+    socket.emit('update_status', { 'playerStatus': playerStatus, 'boardState': boardState,'sign' : sign ,'room':room})
     
 }
 socket.on('NewStatus', function(data){
     playerStatus = data.playerStatus
     boardState = data.boardState
     sign = data.sign
+    /*
     const cells = document.querySelectorAll('[data-cell]');
+    
     cells.forEach((cell, index) => {
         cell.innerText = boardState[index];
     });
+    */
 });
 
 function restartGame(){
@@ -297,7 +302,7 @@ function restartGame(){
 
 }
 socket.on('restart_game',function(){
-
+    document.querySelector('[data-winning-message]').innerText = '';
     startGame(playerStatus['players'][0],playerStatus['players'][1]);
 });
 
@@ -308,12 +313,16 @@ socket.on('restart_game',function(){
 function handleClick(event) {
     var room = '{{room}}';
     var currentUser = getCookie('username'); 
+    
     if(playerStatus['currentPlayer'] === currentUser){
         const cell = event.target;
         // 如果該格子已經有棋子或者遊戲已經結束，則返回
         if (cell.textContent !== '' || checkWin()) return;
+        
         placeMark(cell);
+        console.log(boardState);
         if (checkWin()) {
+            
             endGame(false);
         } else if (isDraw()) {
             endGame(true);
@@ -330,14 +339,28 @@ function handleClick(event) {
 function placeMark(cell) {
     const currentPlayer = playerStatus['currentPlayer'];
     const currentPlayerSign = sign[currentPlayer];
+    socket.emit('sendMark',{'cell_id':cell.id, 'currentPlayerSign' : currentPlayerSign,'sign':sign,'room':room});
+    
+    cell.innerText = currentPlayerSign;
+    cell.classList.add(currentPlayerSign);
 
+    //const cells = document.querySelectorAll('[data-cell]');
+    //boardState = Array.from(cells).map(cell => cell.innerText); // 將當前格子的內容存到 boardState 中的相應索引位置
+
+}
+socket.on("placeMark",function(data){
+    cell_id = data['cell_id'];
+    currentPlayerSign = data['currentPlayerSign'];
+    cell = document.getElementById(cell_id);
+    
     cell.innerText = currentPlayerSign;
     cell.classList.add(currentPlayerSign);
 
     const cells = document.querySelectorAll('[data-cell]');
     boardState = Array.from(cells).map(cell => cell.innerText); // 將當前格子的內容存到 boardState 中的相應索引位置
+    
+})
 
-}
 
 // 交換玩家的回合
 function swapTurns() {
@@ -350,7 +373,7 @@ function swapTurns() {
     }
     playerStatus = playerStatus;
     // 向後端發送更新遊戲狀態的訊息
-    socket.emit('update_status', { playerStatus: playerStatus, boardState: boardState,sign : sign ,room,room})
+    socket.emit('update_status', { 'playerStatus': playerStatus, 'boardState': boardState,'sign' : sign ,'room':room})
 }
 
 // 檢查勝利條件
@@ -386,23 +409,37 @@ function isDraw() {
 function endGame(draw) {
     const winningMessageElement = document.querySelector('[data-winning-message]');
     if (draw) {
-        winningMessageElement.innerText = '遊戲結束，平局!';
+        //winningMessageElement.innerText = '遊戲結束，平局!';
+        socket.emit('endGame',{'msg' : '遊戲結束，平局!','room':room,'sign':sign});
     } else {
-        winningMessageElement.innerText = `遊戲結束，${playerStatus['currentPlayer']} 獲勝!`;
+       //winningMessageElement.innerText = `遊戲結束，${playerStatus['currentPlayer']} 獲勝!`;
+        socket.emit('endGame',{'msg' : `遊戲結束，${playerStatus['currentPlayer']} 獲勝!`,'room':room,'sign':sign});
+
     }
+    const cells = document.querySelectorAll('[data-cell]');
     boardState = Array.from(cells).map(cell => cell.innerText); // 取得當前的棋盤狀態
     sign[playerStatus['players'][0]] = '';
     sign[playerStatus['players'][1]] = '';
     playerStatus = playerStatus;
     // 向後端發送更新遊戲狀態的訊息
-    const cells = document.querySelectorAll('[data-cell]');
+    /*
     cells.forEach(cell => {
         cell.innerText = '';
         cell.classList.remove('X', 'O', 'won');
     });
-    
-    socket.emit('update_status', { playerStatus: playerStatus, boardState: boardState,sign : sign });
+    */
+    // 向後端發送更新遊戲狀態的訊息
+    socket.emit('update_status', { 'playerStatus': playerStatus, 'boardState': boardState,'sign' : sign ,'room':room})
+
 }
+
+
+socket.on('endGameMsg',function(data){
+    const winningMessageElement = document.querySelector('[data-winning-message]');
+    msg = data['msg'];
+    winningMessageElement.innerText = msg;
+})
+
 
 //退出遊戲
 function exitGame(){
@@ -427,9 +464,11 @@ socket.on('exit_game', function(data){
     
     boardState = Array.from(cells).map(cell => cell.innerText);
     playerStatus = {}
-    socket.emit('update_status', { playerStatus: playerStatus, boardState: boardState,sign : sign ,room,room})
+    // 向後端發送更新遊戲狀態的訊息
+    socket.emit('update_status', { 'playerStatus': playerStatus, 'boardState': boardState,'sign' : sign ,'room':room})
     //隱藏棋盤
     document.getElementById('gameContainer').classList.add('d-none');
+    document.querySelector('[data-winning-message]').innerText = '';
 });
 
 // 函數：根據名稱取得 Cookie 的值

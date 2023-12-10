@@ -80,21 +80,30 @@ def join_chat():
 # 處理使用者加入聊天室的功能
 @socketio.on('text_join')
 def on_join(data):
-    username = data['username']
+    uid = data['uid']
     room = data['room']
-
+    username = data['username']
     if room in activate_room:
         for msg in activate_room[room]:
             emit('message', msg)
-
     for i,d in enumerate(usersList[room]):
-        if d['username'] == username:
+        if d['uid'] == uid:
             usersList[room][i]['sid']= request.sid
+            
             break
     join_room(room)
-    send({'msg': username + ' has entered the room.', 'user': 'System'}, room=room)
+    send({'msg': username + ' has entered the room.', 'user': 'System','sid':request.sid}, room=room)
 
-    
+# 取得sid
+@app.route('/get_sid', methods=['POST'])
+def get_sid():
+    data = request.json
+    uid = data['uid']
+    room = data['room']
+    for p in usersList[room]:
+        if uid == p['uid']:
+            return jsonify({'sid': p['sid']})
+
 ### 投票功能 ###
 @app.route('/create_vote', methods=['POST'])
 def create_vote():
@@ -207,17 +216,57 @@ def accept_invite(data):
     # 透過 socketio.emit 向邀請者發送被接受的訊息
     socketio.emit('invitation_accepted', {'sender': sender, 'receiver': receiver, 'message': message})
 
-
+#標記處理
+@socketio.on('sendMark')
+def endGame(data):
+    room = data['room']
+    sign = data['sign']
+    mark = {'cell_id' : data['cell_id'],
+            'currentPlayerSign' :  data['currentPlayerSign']}
+    players_sid = []
+    players = list(sign.keys())
+    
+    for p in usersList[room]:
+        if p['username'] in players:
+            players_sid.append(p['sid'])
+        if len(players_sid) == 2:
+            break
+    socketio.emit('placeMark',mark,to=players_sid)
 #更新遊戲資訊
 @socketio.on('update_status')
 def update_status(data):
     playerStatus = data['playerStatus']
     boardState = data['boardState']
     sign = data['sign']
+    room = data['room']
+    players_sid = []
+    players = list(sign.keys())
     print(playerStatus)
     print(boardState)
     print(sign)
-    socketio.emit('NewStatus',{'playerStatus' : playerStatus,'boardState': boardState,'sign':sign})
+    for p in usersList[room]:
+        if p['username'] in players:
+            players_sid.append(p['sid'])
+        if len(players_sid) == 2:
+            break
+    socketio.emit('NewStatus',{'playerStatus' : playerStatus,'boardState': boardState,'sign':sign},to=players_sid)
+
+# 傳送遊戲結束標語
+@socketio.on('endGame')
+def endGame(data):
+    room = data['room']
+    msg = data['msg']
+    sign = data['sign']
+    players_sid = []
+    players = list(sign.keys())
+    
+    for p in usersList[room]:
+        if p['username'] in players:
+            players_sid.append(p['sid'])
+        if len(players_sid) == 2:
+            break
+    socketio.emit('endGameMsg',{'msg' : msg},to=players_sid)
+    
 #重新開始遊戲
 @socketio.on('restartGame')
 def restartGame():

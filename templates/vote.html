@@ -115,7 +115,6 @@
                 options.push($(this).val());
             });
             var isMultipleChoice = $('#multiple-choice').is(':checked');
-            var isAnonymous = $('#anonymous-voting').is(':checked');
 
             $.ajax({
                 type: "POST",
@@ -126,7 +125,6 @@
                     room: room,
                     options: options,
                     multipleChoice: isMultipleChoice,
-                    anonymous: isAnonymous
                 }),
                 success: function(response) {
                     // 清空並隱藏模態框
