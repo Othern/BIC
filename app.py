@@ -29,10 +29,6 @@ def index():
             room_code = uuid.uuid4().hex[:6].upper()  # 產生隨機的房間代碼
             activate_room[room_code] = []  # 建立新的房間及對應的訊息列表
             return redirect(url_for('.chat', room=room_code, type='text'))  # 導向至文字聊天頁面
-        elif 'create_voice' in request.form:
-            room_code = uuid.uuid4().hex[:6].upper()  # 產生隨機的房間代碼
-            activate_room[room_code] = []  # 建立新的房間及對應的訊息列表
-            return redirect(url_for('.chat', room=room_code, type='voice'))  # 導向至語音聊天頁面
 
         # 加入現有聊天室的動作
         elif 'join' in request.form:
