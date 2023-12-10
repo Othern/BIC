@@ -84,21 +84,30 @@ def join_chat():
 # 處理使用者加入聊天室的功能
 @socketio.on('text_join')
 def on_join(data):
-    username = data['username']
+    uid = data['uid']
     room = data['room']
-
+    username = data['username']
     if room in activate_room:
         for msg in activate_room[room]:
             emit('message', msg)
-
     for i,d in enumerate(usersList[room]):
-        if d['username'] == username:
+        if d['uid'] == uid:
             usersList[room][i]['sid']= request.sid
+            
             break
     join_room(room)
-    send({'msg': username + ' has entered the room.', 'user': 'System'}, room=room)
+    send({'msg': username + ' has entered the room.', 'user': 'System','sid':request.sid}, room=room)
 
-    
+# 取得sid
+@app.route('/get_sid', methods=['POST'])
+def get_sid():
+    data = request.json
+    uid = data['uid']
+    room = data['room']
+    for p in usersList[room]:
+        if uid == p['uid']:
+            return jsonify({'sid': p['sid']})
+
 ### 投票功能 ###
 @app.route('/create_vote', methods=['POST'])
 def create_vote():

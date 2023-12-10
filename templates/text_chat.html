@@ -115,7 +115,11 @@
                 keyboard: false
             });
         });
-
+        // 函數：根據名稱取得 Cookie 的值
+        function getCookie(name) {
+            var match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
+            if (match) return match[2];
+        }
         function joinChat() {
             username = $('#username').val();
             $.ajax({
@@ -131,15 +135,30 @@
                     // 隱藏模態框
                     $('#usernameModal').modal('hide');
                     document.cookie = "username=" + response.username + "; path=/";  // 这里的 path=/ 表示 Cookie 可以在整个站点中使用
-                    document.cookie = "uid" + response.uid + "; path=/";  // 这里的 path=/ 表示 Cookie 可以在整个站点中使用
-                    socket.emit('text_join', {'username': response.username, 'room': response.room});
+                    document.cookie = "uid=" + response.uid + "; path=/";  // 这里的 path=/ 表示 Cookie 可以在整个站点中使用
+                    socket.emit('text_join', {'uid': response.uid,'username':response.username, 'room': response.room});
+                    $.ajax({
+                        type: "POST",
+                        url: "/get_sid",
+                        contentType: "application/json;charset=UTF-8",
+                        data: JSON.stringify({
+                            uid : getCookie('uid'),
+                            room : room
+                        }),
+                        success: function(response) {
+                            document.cookie = "sid=" + response.sid + "; path=/";  // 这里的 path=/ 表示 Cookie 可以在整个站点中使用
+                        },
+                        error: function(error) {
+                            
+                        }
+                    });
 
                 },
                 error: function(error) {
                     alert('Please enter a username.');
                 }
             });
-
+            
         }
         
 
